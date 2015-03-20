@@ -1,9 +1,11 @@
-Lab1 report
-[练习1]
+# Lab1 erport
+
+## [练习1]
 
 [练习1.1] 操作系统镜像文件 ucore.img 是如何一步一步生成的?(需要比较详细地解释 Makefile 中
 每一条相关命令和命令参数的含义,以及说明命令导致的结果)
 
+```
 bin/ucore.img
 | 生成ucore.img的相关代码为
 | $(UCOREIMG): $(kernel) $(bootblock)
@@ -40,12 +42,12 @@ bin/ucore.img
 |	|	| 	-nostdinc  -fno-stack-protector -Ilibs/ -Os -nostdinc \
 |	|	| 	-c boot/bootasm.S -o obj/boot/bootasm.o
 |	|	| 其中关键的参数为
-|	|	| 	-ggdb  生成可供gdb使用的调试信息
-|	|	|	-m32  生成适用于32位环境的代码
-|	|	| 	-gstabs  生成stabs格式的调试信息
-|	|	| 	-nostdinc  不使用标准库
-|	|	|	-fno-stack-protector  不生成用于检测缓冲区溢出的代码
-|	|	| 	-Os  为减小代码大小而进行优化
+|	|	| 	-ggdb  生成可供gdb使用的调试信息。这样才能用qemu+gdb来调试bootloader or ucore。
+|	|	|	-m32  生成适用于32位环境的代码。我们用的模拟硬件是32bit的80386，所以ucore也要是32位的软件。
+|	|	| 	-gstabs  生成stabs格式的调试信息。这样要ucore的monitor可以显示出便于开发者阅读的函数调用栈信息
+|	|	| 	-nostdinc  不使用标准库。标准库是给应用程序用的，我们是编译ucore内核，OS内核是提供服务的，所以所有的服务要自给自足。
+|	|	|	-fno-stack-protector  不生成用于检测缓冲区溢出的代码。这是for 应用程序的，我们是编译内核，ucore内核好像还用不到此功能。
+|	|	| 	-Os  为减小代码大小而进行优化。根据硬件spec，主引导扇区只有512字节，我们写的简单bootloader的最终大小不能大于510字节。
 |	|	| 	-I<dir>  添加搜索头文件的路径
 |	|	| 
 |	|	| 生成bootmain.o需要bootmain.c
@@ -137,6 +139,7 @@ bin/ucore.img
 |
 | 从第二个块开始写kernel中的内容
 | dd if=bin/kernel of=bin/ucore.img seek=1 conv=notrunc
+```
 
 [练习1.2] 一个被系统认为是符合规范的硬盘主引导扇区的特征是什么?
 
@@ -146,28 +149,37 @@ bin/ucore.img
 
 
 
-[练习2]
+## [练习2]
 
 [练习2.1] 从 CPU 加电后执行的第一条指令开始,单步跟踪 BIOS 的执行。
 
-通过改写Makefile文件  ()
+通过改写Makefile文件
+
+```
 	debug: $(UCOREIMG)
 		$(V)$(TERMINAL) -e "$(QEMU) -S -s -d in_asm -D $(BINDIR)/q.log -parallel stdio -hda $< -serial null"
 		$(V)sleep 2
 		$(V)$(TERMINAL) -e "gdb -q -tui -x tools/gdbinit"
-在调用qemu时增加-d in_asm -D q.log参数，便可以将运行的汇编指令保存在q.log中。
-为防止qemu在gdb连接后立即开始执行，删除了tools/gdbinit中的"continue"行。
+```
+
+在调用qemu时增加`-d in_asm -D q.log`参数，便可以将运行的汇编指令保存在q.log中。
+为防止qemu在gdb连接后立即开始执行，删除了`tools/gdbinit`中的`continue`行。
 
 [练习2.2] 在初始化位置0x7c00 设置实地址断点,测试断点正常。
 
 在tools/gdbinit结尾加上
+
+```
     set architecture i8086  //设置当前调试的CPU是8086
 	b *0x7c00  //在0x7c00处设置断点。此地址是bootloader入口点地址，可看boot/bootasm.S的start地址处
 	c          //continue简称，表示继续执行
 	x /2i $pc  //显示当前eip处的汇编指令
 	set architecture i386  //设置当前调试的CPU是80386
+```
 	
 运行"make debug"便可得到
+
+```
 	Breakpoint 2, 0x00007c00 in ?? ()
 	=> 0x7c00:      cli    
 	   0x7c01:      cld    
@@ -179,15 +191,20 @@ bin/ucore.img
 	   0x7c0c:      test   $0x2,%al
 	   0x7c0e:      jne    0x7c0a
 	   0x7c10:      mov    $0xd1,%al
+```
 
 [练习2.3] 在调用qemu 时增加-d in_asm -D q.log 参数，便可以将运行的汇编指令保存在q.log 中。
 将执行的汇编代码与bootasm.S 和 bootblock.asm 进行比较，看看二者是否一致。
 
 在tools/gdbinit结尾加上
+```
 	b *0x7c00
 	c
 	x /10i $pc
+```
+
 便可以在q.log中读到"call bootmain"前执行的命令
+```
 	----------------
 	IN: 
 	0x00007c00:  cli    
@@ -257,13 +274,17 @@ bin/ucore.img
 	----------------
 	IN: 
 	0x00007d0d:  push   %ebp
+```
+
 其与bootasm.S和bootblock.asm中的代码相同。
 
-[练习3] 分析bootloader 进入保护模式的过程。
+## [练习3]
+分析bootloader 进入保护模式的过程。
 
-从%cs=0 $pc=0x7c00，进入后
+从`%cs=0 $pc=0x7c00`，进入后
 
 首先清理环境：包括将flag置0和将段寄存器置0
+```
 	.code16
 	    cli
 	    cld
@@ -271,9 +292,11 @@ bin/ucore.img
 	    movw %ax, %ds
 	    movw %ax, %es
 	    movw %ax, %ss
+```
 
 开启A20：通过将键盘控制器上的A20线置于高电位，全部32条地址线可用，
 可以访问4G的内存空间。
+```
 	seta20.1:               # 等待8042键盘控制器不忙
 	    inb $0x64, %al      # 
 	    testb $0x2, %al     #
@@ -289,21 +312,29 @@ bin/ucore.img
 	
 	    movb $0xdf, %al     # 打开A20
 	    outb %al, $0x60     # 
+```
 
 初始化GDT表：一个简单的GDT表和其描述符已经静态储存在引导区中，载入即可
+```
 	    lgdt gdtdesc
+```
 
 进入保护模式：通过将cr0寄存器PE位置1便开启了保护模式
+```
 	    movl %cr0, %eax
 	    orl $CR0_PE_ON, %eax
 	    movl %eax, %cr0
+```
 
 通过长跳转更新cs的基地址
-	    ljmp $PROT_MODE_CSEG, $protcseg
+```
+	 ljmp $PROT_MODE_CSEG, $protcseg
 	.code32
 	protcseg:
+```
 
 设置段寄存器，并建立堆栈
+```
 	    movw $PROT_MODE_DSEG, %ax
 	    movw %ax, %ds
 	    movw %ax, %es
@@ -312,16 +343,19 @@ bin/ucore.img
 	    movw %ax, %ss
 	    movl $0x0, %ebp
 	    movl $start, %esp
-
+```
 转到保护模式完成，进入boot主方法
+```
 	    call bootmain
+```
 
 
-
-[练习4] ：分析bootloader加载ELF格式的OS的过程。
+## [练习4]
+分析bootloader加载ELF格式的OS的过程。
 
 首先看readsect函数，
-readsect从设备的第secno扇区读取数据到dst位置
+`readsect`从设备的第secno扇区读取数据到dst位置
+```
 	static void
 	readsect(void *dst, uint32_t secno) {
 	    waitdisk();
@@ -343,8 +377,10 @@ readsect从设备的第secno扇区读取数据到dst位置
 	    insl(0x1F0, dst, SECTSIZE / 4);         // 读取到dst位置，
 	                                            // 幻数4因为这里以DW为单位
 	}
+```
 
 readseg简单包装了readsect，可以从设备读取任意长度的内容。
+```
 	static void
 	readseg(uintptr_t va, uint32_t count, uint32_t offset) {
 	    uintptr_t end_va = va + count;
@@ -359,9 +395,10 @@ readseg简单包装了readsect，可以从设备读取任意长度的内容。
 	        readsect((void *)va, secno);
 	    }
 	}
-
+```
 
 在bootmain函数中，
+```
 	void
 	bootmain(void) {
 	    // 首先读取ELF的头部
@@ -394,25 +431,30 @@ readseg简单包装了readsect，可以从设备读取任意长度的内容。
 	    outw(0x8A00, 0x8E00);
 	    while (1);
 	}
+```
 
 
-
-[练习5] 实现函数调用堆栈跟踪函数 
+## [练习5] 
+实现函数调用堆栈跟踪函数 
 
 ss:ebp指向的堆栈位置储存着caller的ebp，以此为线索可以得到所有使用堆栈的函数ebp。
 ss:ebp+4指向caller调用时的eip，ss:ebp+8等是（可能的）参数。
 
 输出中，堆栈最深一层为
+```
 	ebp:0x00007bf8 eip:0x00007d68 \
 		args:0x00000000 0x00000000 0x00000000 0x00007c4f
 	    <unknow>: -- 0x00007d67 --
+```
+
 其对应的是第一个使用堆栈的函数，bootmain.c中的bootmain。
 bootloader设置的堆栈从0x7c00开始，使用"call bootmain"转入bootmain函数。
 call指令压栈，所以bootmain中ebp为0x7bf8。
 
 
 
-[练习6] 完善中断初始化和处理
+## [练习6]
+完善中断初始化和处理
 
 [练习6.1] 中断向量表中一个表项占多少字节？其中哪几位代表中断处理代码的入口？
 
@@ -420,13 +462,17 @@ call指令压栈，所以bootmain中ebp为0x7bf8。
 两者联合便是中断处理程序的入口地址。
 
 [练习6.2] 请编程完善kern/trap/trap.c中对中断向量表进行初始化的函数idt_init。
+
 见代码
 
 [练习6.3] 请编程完善trap.c中的中断处理函数trap，在对时钟中断进行处理的部分填写trap函数
+
 见代码
 
 
-[练习7]  增加syscall功能，即增加一用户态函数（可执行一特定系统调用：获得时钟计数值），
+## [练习7]
+
+增加syscall功能，即增加一用户态函数（可执行一特定系统调用：获得时钟计数值），
 当内核初始完毕后，可从内核态返回到用户态的函数，而用户态的函数又通过系统调用得到内核态的服务
 
 在idt_init中，将用户态调用SWITCH_TOK中断的权限打开。
@@ -434,18 +480,24 @@ call指令压栈，所以bootmain中ebp为0x7bf8。
 
 在trap_dispatch中，将iret时会从堆栈弹出的段寄存器进行修改
 	对TO User
+```
 	    tf->tf_cs = USER_CS;
 	    tf->tf_ds = USER_DS;
 	    tf->tf_es = USER_DS;
 	    tf->tf_ss = USER_DS;
+```
 	对TO Kernel
+
+```
 	    tf->tf_cs = KERNEL_CS;
 	    tf->tf_ds = KERNEL_DS;
 	    tf->tf_es = KERNEL_DS;
+```
 
 在lab1_switch_to_user中，调用T_SWITCH_TOU中断。
 注意从中断返回时，会多pop两位，并用这两位的值更新ss,sp，损坏堆栈。
 所以要先把栈压两位，并在从中断返回后修复esp。
+```
 	asm volatile (
 	    "sub $0x8, %%esp \n"
 	    "int %0 \n"
@@ -453,17 +505,21 @@ call指令压栈，所以bootmain中ebp为0x7bf8。
 	    : 
 	    : "i"(T_SWITCH_TOU)
 	);
+```
 
 在lab1_switch_to_kernel中，调用T_SWITCH_TOK中断。
 注意从中断返回时，esp仍在TSS指示的堆栈中。所以要在从中断返回后修复esp。
+```
 	asm volatile (
 	    "int %0 \n"
 	    "movl %%ebp, %%esp \n"
 	    : 
 	    : "i"(T_SWITCH_TOK)
 	);
+```
 
 但这样不能正常输出文本。根据提示，在trap_dispatch中转User态时，将调用io所需权限降低。
+```
 	tf->tf_eflags |= 0x3000;
-
+```
 
