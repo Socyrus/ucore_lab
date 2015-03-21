@@ -31,6 +31,7 @@ static struct pseudodesc idt_pd = {
     sizeof(idt) - 1, (uintptr_t)idt
 };
 
+
 /* idt_init - initialize IDT to each of the entry points in kern/trap/vectors.S */
 void
 idt_init(void) {
@@ -46,6 +47,37 @@ idt_init(void) {
       *     You don't know the meaning of this instruction? just google it! and check the libs/x86.h to know more.
       *     Notice: the argument of lidt is idt_pd. try to find it!
       */
+
+	extern uintptr_t __vectors[];
+	int i=0;
+	for (i=0;i<256;i++){
+		if (i==T_SYSCALL){
+			SETGATE(idt[i], 1, GD_KTEXT, __vectors[i], DPL_USER);  //syscall
+		}
+		else
+		if (i<=31 && i!=2){
+			SETGATE(idt[i], 1, GD_KTEXT, __vectors[i], DPL_KERNEL);}  //trap(exception)
+		else
+			SETGATE(idt[i], 0, GD_KTEXT, __vectors[i], DPL_KERNEL);	  //interrupt
+	}
+
+	SETGATE(idt[T_SWITCH_TOK], 0, GD_KTEXT, __vectors[T_SWITCH_TOK], DPL_USER);
+
+	//load idt
+	lidt(&idt_pd);
+
+	/* *
+	 * Set up a normal interrupt/trap gate descriptor
+	 *   - istrap: 1 for a trap (= exception) gate, 0 for an interrupt gate
+	 *   - sel: Code segment selector for interrupt/trap handler
+	 *   - off: Offset in code segment for interrupt/trap handler
+	 *   - dpl: Descriptor Privilege Level - the privilege level required
+	 *          for software to invoke this interrupt/trap gate explicitly
+	 *          using an int instruction.
+	 *
+	 * #define SETGATE(gate, istrap, sel, off, dpl) {
+	 * */
+
 }
 
 static const char *
@@ -147,6 +179,11 @@ trap_dispatch(struct trapframe *tf) {
          * (2) Every TICK_NUM cycle, you can print some info using a funciton, such as print_ticks().
          * (3) Too Simple? Yes, I think so!
          */
+    	ticks++;
+    	if (ticks%TICK_NUM==0){
+    		print_ticks();
+    		ticks-=TICK_NUM;
+    	}
         break;
     case IRQ_OFFSET + IRQ_COM1:
         c = cons_getc();
