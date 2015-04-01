@@ -384,7 +384,7 @@ get_pte(pde_t *pgdir, uintptr_t la, bool create) {
         // (5) get linear address of page
         memset(KADDR(pa), 0, 4096);
         // (6) clear page content using memset
-        (*pdep) = pa | PTE_P | PTE_W | PTE_U; //set -> present | not writable | not user access
+        (*pdep) = pa | PTE_P | PTE_W | PTE_U;
         // (7) set page directory entry's permission
     }
 
