@@ -1,0 +1,34 @@
+###练习1
+```
+给未映射的地址映射上物理页
+
+程序分为以下几步完成上述功能
+1.得到虚拟地址相应地页表项
+2.如果物理页帧不存在，分配以下物理页帧
+
+ptep = get_pte(mm->pgdir,addr,1);
+    if (ptep == NULL){
+    	cprintf("do_pgfault failed : get_pte\n");
+    	goto failed;
+    }
+    		//(1) try to find a pte, if pte's PT(Page Table) isn't existed, then create a PT.
+    if (*ptep == 0) {
+    	if (pgdir_alloc_page(mm->pgdir,addr,perm) == NULL){
+    		cprintf("do_pgfault : pgdir_alloc_page \n");
+    		goto failed;
+    	}
+                            //(2) if the phy addr isn't exist, then alloc a page & map the phy addr with logical addr
+
+    }
+```
+
+###练习2
+```
+完成FIFO的页面替换算法
+
+首先是填充do_pgfault函数，调用swap_in函数，把数据swap进来，然后是做标记
+
+然后是填充swap_fifo.c的map_swappable和swap_out_victim
+map_swappable就是把页面加入swappable的队列
+swap_out_victim就是把队列的队尾的page拿出来，在队列中删除，返回页面
+```
