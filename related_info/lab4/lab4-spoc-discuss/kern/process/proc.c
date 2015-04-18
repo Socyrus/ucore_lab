@@ -66,6 +66,7 @@ struct proc_struct *idleproc = NULL;
 // init procs
 struct proc_struct *initproc1 = NULL;
 struct proc_struct *initproc2 = NULL;
+struct proc_struct *initproc3 = NULL;
 // current proc
 struct proc_struct *current = NULL;
 
@@ -158,6 +159,8 @@ get_pid(void) {
 // NOTE: before call switch_to, should load  base addr of "proc"'s new PDT
 void
 proc_run(struct proc_struct *proc) {
+	cprintf("proc_run : pid = %d, name = %s running->runnable\n",current->pid,current->name);
+	cprintf("proc_run : pid = %d, name = %s running\n",proc->pid,proc->name);
     if (proc != current) {
         bool intr_flag;
         struct proc_struct *prev = current, *next = proc;
@@ -275,6 +278,8 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     //    1. call alloc_proc to allocate a proc_struct
     proc = alloc_proc();
     proc->pid = get_pid();
+
+    cprintf("init: pid = %d \n",proc->pid);
     //    2. call setup_kstack to allocate a kernel stack for child process
     setup_kstack(proc);
     //    3. call copy_thread to setup tf & context in proc_struct
@@ -327,6 +332,7 @@ repeat:
 	}
     if (haskid) {
 		cprintf("do_wait: has kid begin\n");
+		cprintf("do_wait: pid = %d, name = %s sleeping\n",proc->pid,proc->name);
         current->state = PROC_SLEEPING;
         current->wait_state = WT_CHILD;
         schedule();
@@ -345,6 +351,7 @@ found:
         remove_links(proc);
     }
     local_intr_restore(intr_flag);
+    cprintf("kid pid = %d DONE\n", proc->pid);
     put_kstack(proc);
     kfree(proc);
     return 0;
@@ -360,6 +367,7 @@ do_exit(int error_code) {
     }
 	cprintf(" do_exit: proc pid %d will exit\n", current->pid);
 	cprintf(" do_exit: proc  parent %x\n", current->parent);
+	cprintf(" do_exit: pid = %d, name = %s become ZOMBIE\n", current->pid, current->name);
     current->state = PROC_ZOMBIE;
 	bool intr_flag;
     struct proc_struct *proc;
@@ -409,14 +417,17 @@ proc_init(void) {
 
     int pid1= kernel_thread(init_main, "init main1: Hello world!!", 0);
     int pid2= kernel_thread(init_main, "init main2: Hello world!!", 0);
+    int pid3= kernel_thread(init_main, "init main3: Hello world!!", 0);
     if (pid1 <= 0 || pid2<=0) {
         panic("create kernel thread init_main1 or 2 failed.\n");
     }
 
     initproc1 = find_proc(pid1);
 	initproc2 = find_proc(pid2);
+	initproc3 = find_proc(pid3);
     set_proc_name(initproc1, "init1");
 	set_proc_name(initproc2, "init2");
+	set_proc_name(initproc3, "init3");
     cprintf("proc_init:: Created kernel thread init_main--> pid: %d, name: %s\n",initproc1->pid, initproc1->name);
 	cprintf("proc_init:: Created kernel thread init_main--> pid: %d, name: %s\n",initproc2->pid, initproc2->name);
     assert(idleproc != NULL && idleproc->pid == 0);

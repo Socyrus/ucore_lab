@@ -8,6 +8,7 @@ void
 wakeup_proc(struct proc_struct *proc) {
     assert(proc->state != PROC_ZOMBIE && proc->state != PROC_RUNNABLE);
     proc->state = PROC_RUNNABLE;
+    cprintf("ready: pid = %d, name = %s ready\n",proc->pid, proc->name);
 }
 
 void
