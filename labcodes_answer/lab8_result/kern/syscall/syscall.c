@@ -88,6 +88,9 @@ sys_sleep(uint32_t arg[]) {
 
 static int
 sys_open(uint32_t arg[]) {
+	step_count=0;
+	cprintf("[sys open arg :%s] %d\n",arg[0],step_count);
+	step_count++;
     const char *path = (const char *)arg[0];
     uint32_t open_flags = (uint32_t)arg[1];
     return sysfile_open(path, open_flags);
@@ -101,6 +104,7 @@ sys_close(uint32_t arg[]) {
 
 static int
 sys_read(uint32_t arg[]) {
+	cprintf("[sys_read]\n");
     int fd = (int)arg[0];
     void *base = (void *)arg[1];
     size_t len = (size_t)arg[2];

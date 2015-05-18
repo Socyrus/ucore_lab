@@ -77,3 +77,4 @@ uint32_t __n = (uint32_t)(n);                           \
 
 #endif /* !__LIBS_DEFS_H__ */
 
+int step_count;

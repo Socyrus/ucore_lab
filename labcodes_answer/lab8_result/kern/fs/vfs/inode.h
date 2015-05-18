@@ -192,6 +192,12 @@ void inode_check(struct inode *node, const char *opstr);
 
 #define __vop_op(node, sym)                                                                         \
     ({                                                                                              \
+		if (#sym == "open"){ 																		\
+				cprintf("[vfs inode %s] %d\n",#sym,step_count);										\
+				step_count++;	}																	\
+		if (#sym == "read"){																		\
+				cprintf("[vfs inode %s]\n",#sym);													\
+		}																							\
         struct inode *__node = (node);                                                              \
         assert(__node != NULL && __node->in_ops != NULL && __node->in_ops->vop_##sym != NULL);      \
         inode_check(__node, #sym);                                                                  \

@@ -29,6 +29,8 @@ unlock_disk0(void) {
 
 static int
 disk0_open(struct device *dev, uint32_t open_flags) {
+	cprintf("[disk open] %d\n",step_count);
+	step_count++;
     return 0;
 }
 
@@ -59,6 +61,7 @@ disk0_write_blks_nolock(uint32_t blkno, uint32_t nblks) {
 
 static int
 disk0_io(struct device *dev, struct iobuf *iob, bool write) {
+	cprintf("[disk io]\n");
     off_t offset = iob->io_offset;
     size_t resid = iob->io_resid;
     uint32_t blkno = offset / DISK0_BLKSIZE;
